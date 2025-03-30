@@ -31,13 +31,12 @@ class Console : JFrame() {
         size = Dimension(1200, 800)
         scrollPane.border = EmptyBorder(5, 5, 5, 5)
         currentDirectory = System.getProperty("user.dir")
-        textArea.text = "$currentDirectory$ "
-        commandStartIndex = textArea.text.length
         textArea.foreground = Color(255, 255, 255)
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
         textArea.addKeyListener(ConsoleInput(this))
         textArea.font = Font("dialog", NORMAL, 16)
+        clearTerminal()
         add(scrollPane)
     }
 
@@ -65,6 +64,11 @@ class Console : JFrame() {
         newLine()
     }
 
+    fun clearTerminal() {
+        textArea.text = "$currentDirectory$ "
+        commandStartIndex = textArea.text.length
+    }
+
     fun newLine() {
         textArea.text += "\n$currentDirectory$ "
         commandStartIndex = textArea.text.length
@@ -72,6 +76,7 @@ class Console : JFrame() {
 }
 
 class ConsoleInput(val console: Console) : KeyAdapter() {
+    var lctrlheld = false
     override fun keyPressed(event: KeyEvent) {
         if (event.keyCode == KeyEvent.VK_ENTER) {
             console.executeCommand()
@@ -82,6 +87,21 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
                 // We are at the start of the command and shouldn't delete any farther
                 event.consume()
             }
+        } else if (event.keyCode == KeyEvent.VK_CONTROL) {
+            lctrlheld = true
+        } else if (event.keyCode == KeyEvent.VK_L && lctrlheld) {
+            console.clearTerminal()
+        } else if (event.keyCode == KeyEvent.VK_C && lctrlheld) {
+            console.newLine()
+        } else if (event.keyCode == KeyEvent.VK_ESCAPE) {
+            console.dispose()
+        }
+    }
+
+    override fun keyReleased(event: KeyEvent?) {
+        if (event == null) return
+        if (event.keyCode == KeyEvent.VK_CONTROL) {
+            lctrlheld = false
         }
     }
 }
