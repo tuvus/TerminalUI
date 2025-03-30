@@ -14,6 +14,8 @@ import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
+import javax.swing.event.CaretEvent
+import javax.swing.event.CaretListener
 
 
 class Console : JFrame() {
@@ -35,6 +37,7 @@ class Console : JFrame() {
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
         textArea.addKeyListener(ConsoleInput(this))
+        textArea.addCaretListener(CaretInput(this))
         textArea.font = Font("dialog", NORMAL, 16)
         clearTerminal()
         add(scrollPane)
@@ -103,6 +106,14 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
         if (event.keyCode == KeyEvent.VK_CONTROL) {
             lctrlheld = false
         }
+    }
+}
+
+class CaretInput(val console: Console) : CaretListener {
+    override fun caretUpdate(e: CaretEvent?) {
+        if (e == null) return
+        if (e.dot < console.commandStartIndex && console.textArea.text.length >= console.commandStartIndex)
+            console.textArea.caretPosition = console.commandStartIndex
     }
 }
 
