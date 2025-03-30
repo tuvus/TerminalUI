@@ -4,10 +4,10 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
-import java.io.ByteArrayOutputStream
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.PrintStream
+import java.io.InputStreamReader
 import javax.swing.JFrame
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
@@ -41,20 +41,13 @@ class Console : JFrame() {
 
     fun executeCommand() {
         val command = ProcessBuilder(textArea.text.substring(commandStartIndex))
-        command.inheritIO()
         command.directory(File(currentDirectory))
-        val standardOut = System.out
-        val standardErr = System.err
-        val outputStream = ByteArrayOutputStream()
-        val tempOutput = PrintStream(outputStream)
-        System.setOut(tempOutput)
-        System.setErr(tempOutput)
-        command.start().waitFor()
+        val process = command.start()
 
-        System.setOut(standardOut)
-        System.setErr(standardErr)
-        textArea.text += "\n"
-        textArea.text += outputStream.toString()
+        val reader = BufferedReader(InputStreamReader(process.inputStream))
+        process.waitFor()
+
+        textArea.text += "\n" + reader.readText()
         newLine()
     }
 
@@ -70,6 +63,11 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
             console.executeCommand()
             // Consume the event so that we don't get an extra new line
             event.consume()
+        } else if (event.keyCode == KeyEvent.VK_BACK_SPACE) {
+            if (console.commandStartIndex == console.textArea.text.length) {
+                // We are at the start of the command and shouldn't delete any farther
+                event.consume()
+            }
         }
     }
 }
