@@ -40,14 +40,22 @@ class Console : JFrame() {
     }
 
     fun executeCommand() {
-        val command = ProcessBuilder(textArea.text.substring(commandStartIndex))
+        val command = ProcessBuilder(
+            mutableListOf("sh", "-c").apply { add((textArea.text.substring(commandStartIndex)) + "&& pwd"); })
         command.directory(File(currentDirectory))
         val process = command.start()
 
         val reader = BufferedReader(InputStreamReader(process.inputStream))
-        process.waitFor()
+        if (process.waitFor() != 0) return
 
-        textArea.text += "\n" + reader.readText()
+        var output = reader.readText()
+        // Remove the extra newline at the end
+        output = output.substring(0, output.lastIndexOf('\n'))
+        // Check if pwd was the only output, if so add an extra newline for later
+        if (output.indexOf('\n') == -1)
+            output = "\n" + output
+        else textArea.text += "\n" + output.substring(0, output.lastIndexOf('\n'))
+        currentDirectory = output.substring(output.lastIndexOf('\n') + 1)
         newLine()
     }
 
