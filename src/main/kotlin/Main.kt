@@ -94,9 +94,13 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
             lctrlheld = true
         } else if (event.keyCode == KeyEvent.VK_L && lctrlheld) {
             console.clearTerminal()
+            event.consume()
         } else if (event.keyCode == KeyEvent.VK_C && lctrlheld) {
             console.newLine()
+            event.consume()
         } else if (event.keyCode == KeyEvent.VK_ESCAPE) {
+            console.dispose()
+        } else if (event.keyCode == KeyEvent.VK_Q && lctrlheld) {
             console.dispose()
         }
     }
