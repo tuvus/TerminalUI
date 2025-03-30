@@ -2,6 +2,7 @@ package org.example
 
 import java.awt.Color
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.io.BufferedReader
@@ -28,7 +29,7 @@ class Console : JFrame() {
         title = "CSE"
         isVisible = true
         size = Dimension(1200, 800)
-        scrollPane.border = EmptyBorder(2, 2, 2, 2)
+        scrollPane.border = EmptyBorder(5, 5, 5, 5)
         currentDirectory = System.getProperty("user.dir")
         textArea.text = "$currentDirectory$ "
         commandStartIndex = textArea.text.length
@@ -36,6 +37,7 @@ class Console : JFrame() {
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
         textArea.addKeyListener(ConsoleInput(this))
+        textArea.font = Font("dialog", NORMAL, 16)
         add(scrollPane)
     }
 
@@ -46,7 +48,11 @@ class Console : JFrame() {
         val process = command.start()
 
         val reader = BufferedReader(InputStreamReader(process.inputStream))
-        if (process.waitFor() != 0) return
+        if (process.waitFor() != 0) {
+            textArea.text += "\nError processing command"
+            newLine()
+            return
+        }
 
         var output = reader.readText()
         // Remove the extra newline at the end
