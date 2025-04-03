@@ -50,8 +50,10 @@ class Console : JFrame() {
         val process = command.start()
 
         val reader = BufferedReader(InputStreamReader(process.inputStream))
+        val errorReader = BufferedReader(InputStreamReader(process.errorStream))
         if (process.waitFor() != 0) {
-            textArea.text += "\nError processing command"
+            var errorText = errorReader.readText()
+            textArea.text += "\n" + errorText.substring(0, errorText.lastIndexOf('\n'))
             newLine()
             return
         }
