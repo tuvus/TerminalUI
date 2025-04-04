@@ -1,10 +1,9 @@
 package org.example
 
-import java.awt.Color
-import java.awt.Dimension
-import java.awt.Font
+import java.awt.*
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
+import java.awt.geom.Rectangle2D
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileNotFoundException
@@ -16,6 +15,9 @@ import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
 import javax.swing.event.CaretEvent
 import javax.swing.event.CaretListener
+import javax.swing.text.BadLocationException
+import javax.swing.text.DefaultCaret
+import kotlin.math.roundToInt
 
 
 class Console : JFrame() {
@@ -39,6 +41,7 @@ class Console : JFrame() {
         textArea.addKeyListener(ConsoleInput(this))
         textArea.addCaretListener(CaretInput(this))
         textArea.font = Font("dialog", NORMAL, 16)
+        textArea.caret = TerminalCaret()
         clearTerminal()
         add(scrollPane)
     }
@@ -120,6 +123,48 @@ class CaretInput(val console: Console) : CaretListener {
         if (e == null) return
         if (e.dot < console.commandStartIndex && console.textArea.text.length >= console.commandStartIndex)
             console.textArea.caretPosition = console.commandStartIndex
+    }
+}
+
+
+/**
+ * Custom caret class to make the caret more visible
+ * Adapted from http://www.java2s.com/Code/Java/Swing-JFC/Fanciercustomcaretclass.htm
+ */
+class TerminalCaret : DefaultCaret() {
+    override fun damage(r: Rectangle?) {
+        if (r == null) return
+        x = r.x
+        y = r.y
+        height = r.height
+        if (width <= 0)
+            width = component.width
+        repaint()
+    }
+
+    override fun paint(g: Graphics) {
+        val dot = dot
+        val r: Rectangle2D
+        val currentCharacter: Char
+        try {
+            r = component.modelToView2D(dot)
+            if (r == null) return
+            currentCharacter = component.getText(dot, 1)[0]
+        } catch (e: BadLocationException) {
+            return
+        }
+        // Rectangle2D has positions with type double, so round them to an int, although they should probably only be integers
+        if ((x != r.x.roundToInt()) || (y != r.y.roundToInt())) {
+            repaint()
+            x = r.x.roundToInt()
+            y = r.y.roundToInt()
+            height = r.height.roundToInt()
+        }
+        g.color = Color.WHITE
+        g.setXORMode(component.background)
+        var width = g.fontMetrics.charWidth(currentCharacter)
+        if (width == 0) width = 8
+        if (isVisible) g.fillRect(x, y, width, height)
     }
 }
 
