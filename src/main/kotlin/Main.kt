@@ -76,6 +76,7 @@ class Console : JFrame() {
             else textArea.text += "\n" + output.substring(0, output.lastIndexOf('\n'))
             currentDirectory = output.substring(output.lastIndexOf('\n') + 1)
             newLine()
+            process = null
         }
     }
 
