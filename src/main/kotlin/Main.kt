@@ -18,6 +18,7 @@ import javax.swing.event.CaretListener
 import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultCaret
 import kotlin.math.roundToInt
+import kotlinx.coroutines.*
 
 
 class Console : JFrame() {
@@ -26,6 +27,7 @@ class Console : JFrame() {
     val scrollPane = JScrollPane(textArea)
     var currentDirectory = ""
     var commandStartIndex = 0
+    var process: Process? = null
 
     init {
         setFocusable(true)
@@ -46,30 +48,35 @@ class Console : JFrame() {
         add(scrollPane)
     }
 
-    fun executeCommand() {
+    fun executeCommand() = runBlocking {
+        // Can't have two processes running at once
+        if (process != null) return@runBlocking
         val command = ProcessBuilder(
             mutableListOf("sh", "-c").apply { add((textArea.text.substring(commandStartIndex)) + "&& pwd"); })
         command.directory(File(currentDirectory))
-        val process = command.start()
+        process = command.start()
 
-        val reader = BufferedReader(InputStreamReader(process.inputStream))
-        val errorReader = BufferedReader(InputStreamReader(process.errorStream))
-        if (process.waitFor() != 0) {
-            var errorText = errorReader.readText()
-            textArea.text += "\n" + errorText.substring(0, errorText.lastIndexOf('\n'))
+        launch {
+            val reader = BufferedReader(InputStreamReader(process!!.inputStream))
+            val errorReader = BufferedReader(InputStreamReader(process!!.errorStream))
+            if (process!!.waitFor() != 0) {
+                val errorText = errorReader.readText()
+                textArea.text += "\n" + errorText.substring(0, errorText.lastIndexOf('\n'))
+                process = null
+                newLine()
+                return@launch
+            }
+
+            var output = reader.readText()
+            // Remove the extra newline at the end
+            output = output.substring(0, output.lastIndexOf('\n'))
+            // Check if pwd was the only output, if so add an extra newline for later
+            if (output.indexOf('\n') == -1)
+                output = "\n" + output
+            else textArea.text += "\n" + output.substring(0, output.lastIndexOf('\n'))
+            currentDirectory = output.substring(output.lastIndexOf('\n') + 1)
             newLine()
-            return
         }
-
-        var output = reader.readText()
-        // Remove the extra newline at the end
-        output = output.substring(0, output.lastIndexOf('\n'))
-        // Check if pwd was the only output, if so add an extra newline for later
-        if (output.indexOf('\n') == -1)
-            output = "\n" + output
-        else textArea.text += "\n" + output.substring(0, output.lastIndexOf('\n'))
-        currentDirectory = output.substring(output.lastIndexOf('\n') + 1)
-        newLine()
     }
 
     fun clearTerminal() {
@@ -101,7 +108,9 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
             console.clearTerminal()
             event.consume()
         } else if (event.keyCode == KeyEvent.VK_C && lctrlheld) {
-            console.newLine()
+            if (console.process != null)
+                console.process!!.destroy()
+            else console.newLine()
             event.consume()
         } else if (event.keyCode == KeyEvent.VK_ESCAPE) {
             console.dispose()
