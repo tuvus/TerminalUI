@@ -19,6 +19,7 @@ import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultCaret
 import kotlin.math.roundToInt
 import kotlinx.coroutines.*
+import kotlin.concurrent.thread
 
 /**
  * Code for a simple terminal emulator that creates a new java swing window.
@@ -31,6 +32,7 @@ class Console : JFrame() {
     var currentDirectory = ""
     var commandStartIndex = 0
     var process: Process? = null
+    var threadJob: Thread? = null
 
     init {
         // Setup the window
@@ -54,11 +56,11 @@ class Console : JFrame() {
         add(scrollPane)
     }
 
-    fun executeCommand() = runBlocking {
+    fun executeCommand() {
         // Can't have two processes running at once
-        if (process != null) return@runBlocking
+        if (process != null) return
         val commandText = (textArea.text.substring(commandStartIndex))
-        if (commandText.isBlank()) return@runBlocking
+        if (commandText.isBlank()) return
 
         // Start running the command
         // We don't know if the command the user will run changes the current working directory
@@ -69,16 +71,27 @@ class Console : JFrame() {
         process = command.start()
 
         // We want to wait for the command to complete in a new thread
-        launch {
+        threadJob = thread {
             val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             val errorReader = BufferedReader(InputStreamReader(process!!.errorStream))
-            if (process!!.waitFor() != 0) {
+
+            val result: Int
+            try {
+                result = process!!.waitFor()
+            } catch (e: InterruptedException) {
+                // We were canceled by the main thread
+                process = null
+                return@thread
+            }
+
+
+            if (result != 0) {
                 // There was some error running the command
                 val errorText = errorReader.readText()
                 textArea.text += "\n" + errorText.substring(0, errorText.lastIndexOf('\n'))
                 process = null
                 newLine()
-                return@launch
+                return@thread
             }
 
             var output = reader.readText()
@@ -109,6 +122,7 @@ class Console : JFrame() {
     fun newLine() {
         textArea.text += "\n$currentDirectory$ "
         commandStartIndex = textArea.text.length
+        textArea.caret.dot = commandStartIndex
     }
 }
 
@@ -138,8 +152,10 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
             event.consume()
         } else if (event.keyCode == KeyEvent.VK_C && lctrlheld) {
             // Cancel the command
-            if (console.process != null)
+            if (console.process != null) {
+                console.threadJob!!.interrupt()
                 console.process!!.destroy()
+            }
             else console.newLine()
             event.consume()
         } else if (event.keyCode == KeyEvent.VK_ESCAPE || event.keyCode == KeyEvent.VK_Q && lctrlheld) {
