@@ -20,30 +20,36 @@ import javax.swing.text.DefaultCaret
 import kotlin.math.roundToInt
 import kotlinx.coroutines.*
 
-
+/**
+ * Code for a simple terminal emulator that creates a new java swing window.
+ * The terminal has one big text area that accepts commands from the user and displays the results.
+ */
 class Console : JFrame() {
 
-    val textArea = JTextArea("sadfasfd")
+    val textArea = JTextArea("")
     val scrollPane = JScrollPane(textArea)
     var currentDirectory = ""
     var commandStartIndex = 0
     var process: Process? = null
 
     init {
+        // Setup the window
         setFocusable(true)
         defaultCloseOperation = DISPOSE_ON_CLOSE
-        title = "CSE"
+        title = "Terminal"
         isVisible = true
         size = Dimension(1200, 800)
         scrollPane.border = EmptyBorder(5, 5, 5, 5)
         currentDirectory = System.getProperty("user.dir")
+        // Setup the text area
         textArea.foreground = Color(255, 255, 255)
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
-        textArea.addKeyListener(ConsoleInput(this))
-        textArea.addCaretListener(CaretInput(this))
         textArea.font = Font("dialog", NORMAL, 16)
         textArea.caret = TerminalCaret()
+        // Setup the input listeners
+        textArea.addKeyListener(ConsoleInput(this))
+        textArea.addCaretListener(CaretInput(this))
         clearTerminal()
         add(scrollPane)
     }
@@ -51,15 +57,23 @@ class Console : JFrame() {
     fun executeCommand() = runBlocking {
         // Can't have two processes running at once
         if (process != null) return@runBlocking
+        val commandText = (textArea.text.substring(commandStartIndex))
+        if (commandText.isBlank()) return@runBlocking
+
+        // Start running the command
+        // We don't know if the command the user will run changes the current working directory
+        // so we add our own pwd command to it afterward to figure it out.
         val command = ProcessBuilder(
-            mutableListOf("sh", "-c").apply { add((textArea.text.substring(commandStartIndex)) + "&& pwd"); })
+            mutableListOf("sh", "-c").apply { add("$commandText&& pwd"); })
         command.directory(File(currentDirectory))
         process = command.start()
 
+        // We want to wait for the command to complete in a new thread
         launch {
             val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             val errorReader = BufferedReader(InputStreamReader(process!!.errorStream))
             if (process!!.waitFor() != 0) {
+                // There was some error running the command
                 val errorText = errorReader.readText()
                 textArea.text += "\n" + errorText.substring(0, errorText.lastIndexOf('\n'))
                 process = null
@@ -74,17 +88,24 @@ class Console : JFrame() {
             if (output.indexOf('\n') == -1)
                 output = "\n" + output
             else textArea.text += "\n" + output.substring(0, output.lastIndexOf('\n'))
+            // The last line of the output will always be the new process working directory
             currentDirectory = output.substring(output.lastIndexOf('\n') + 1)
             newLine()
             process = null
         }
     }
 
+    /**
+     * Clears the terminal of all commands and displays the current working directory
+     */
     fun clearTerminal() {
         textArea.text = "$currentDirectory$ "
         commandStartIndex = textArea.text.length
     }
 
+    /**
+     * Creates a new line with the current working directory
+     */
     fun newLine() {
         textArea.text += "\n$currentDirectory$ "
         commandStartIndex = textArea.text.length
@@ -92,7 +113,13 @@ class Console : JFrame() {
 }
 
 class ConsoleInput(val console: Console) : KeyAdapter() {
+    // Keep track of if the left control key is held to execute special commands
     var lctrlheld = false
+
+    /**
+     * Reads in the key input to the text field before adding the character to the text.
+     * Using event.consume() prevents the character from being added to the text area.
+     */
     override fun keyPressed(event: KeyEvent) {
         if (event.keyCode == KeyEvent.VK_ENTER) {
             console.executeCommand()
@@ -106,16 +133,17 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
         } else if (event.keyCode == KeyEvent.VK_CONTROL) {
             lctrlheld = true
         } else if (event.keyCode == KeyEvent.VK_L && lctrlheld) {
+            // Clear the terminal
             console.clearTerminal()
             event.consume()
         } else if (event.keyCode == KeyEvent.VK_C && lctrlheld) {
+            // Cancel the command
             if (console.process != null)
                 console.process!!.destroy()
             else console.newLine()
             event.consume()
-        } else if (event.keyCode == KeyEvent.VK_ESCAPE) {
-            console.dispose()
-        } else if (event.keyCode == KeyEvent.VK_Q && lctrlheld) {
+        } else if (event.keyCode == KeyEvent.VK_ESCAPE || event.keyCode == KeyEvent.VK_Q && lctrlheld) {
+            // Quit the application
             console.dispose()
         }
     }
@@ -129,8 +157,13 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
 }
 
 class CaretInput(val console: Console) : CaretListener {
+    /**
+     * We want to make sure that the user can't move the caret beyond the editable command area.
+     */
     override fun caretUpdate(e: CaretEvent?) {
         if (e == null) return
+        // If the caret position e.dot is to the left of the editable command area console.commandStartIndex
+        // then we should set the cursor to the start of the command area.
         if (e.dot < console.commandStartIndex && console.textArea.text.length >= console.commandStartIndex)
             console.textArea.caretPosition = console.commandStartIndex
     }
@@ -138,12 +171,18 @@ class CaretInput(val console: Console) : CaretListener {
 
 
 /**
- * Custom caret class to make the caret more visible
+ * Custom caret class to make the caret more visible.
  * Adapted from http://www.java2s.com/Code/Java/Swing-JFC/Fanciercustomcaretclass.htm
  */
 class TerminalCaret : DefaultCaret() {
+
+    init {
+        blinkRate = 500
+    }
+
     override fun damage(r: Rectangle?) {
         if (r == null) return
+        // Update the position, height and width of the caret
         x = r.x
         y = r.y
         height = r.height
@@ -172,6 +211,8 @@ class TerminalCaret : DefaultCaret() {
         }
         g.color = Color.WHITE
         g.setXORMode(component.background)
+
+        // Change the width of the caret to match the current character
         var width = g.fontMetrics.charWidth(currentCharacter)
         if (width == 0) width = 8
         if (isVisible) g.fillRect(x, y, width, height)
