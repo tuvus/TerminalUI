@@ -19,6 +19,7 @@ import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultCaret
 import kotlin.math.roundToInt
 import java.awt.Frame.NORMAL
+import javax.imageio.ImageIO
 import kotlin.concurrent.thread
 
 /**
@@ -54,6 +55,7 @@ class Console : JFrame() {
         textArea.addCaretListener(CaretInput(this))
         clearTerminal()
         add(scrollPane)
+        iconImage = ImageIO.read(File("src/resources/Terminal.png"))
     }
 
     fun executeCommand() {
@@ -160,10 +162,10 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
         } else if (event.keyCode == KeyEvent.VK_MINUS && lctrlheld) {
             if (console.textArea.font.size > 10)
                 console.textArea.font = Font(console.textArea.font.name, NORMAL, console.textArea.font.size - 2);
-            event.consume();
+            event.consume()
         } else if (event.keyCode == KeyEvent.VK_EQUALS && lctrlheld) {
             console.textArea.font = Font(console.textArea.font.name, NORMAL, console.textArea.font.size + 2);
-            event.consume();
+            event.consume()
         } else if (event.keyCode == KeyEvent.VK_ESCAPE || event.keyCode == KeyEvent.VK_Q && lctrlheld) {
             // Quit the application
             console.dispose()
