@@ -47,7 +47,7 @@ class Console : JFrame() {
         textArea.foreground = Color(255, 255, 255)
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
-        textArea.font = Font("dialog", NORMAL, 16)
+        textArea.font = Font("Monospaced", NORMAL, 16)
         textArea.caret = TerminalCaret()
         // Setup the input listeners
         textArea.addKeyListener(ConsoleInput(this))
