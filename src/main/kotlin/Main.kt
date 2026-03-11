@@ -18,7 +18,7 @@ import javax.swing.event.CaretListener
 import javax.swing.text.BadLocationException
 import javax.swing.text.DefaultCaret
 import kotlin.math.roundToInt
-import kotlinx.coroutines.*
+import java.awt.Frame.NORMAL
 import kotlin.concurrent.thread
 
 /**
@@ -47,7 +47,7 @@ class Console : JFrame() {
         textArea.foreground = Color(255, 255, 255)
         textArea.background = Color(0, 0, 0)
         scrollPane.background = Color(0, 0, 0)
-        textArea.font = Font("Monospaced", NORMAL, 16)
+        textArea.font = Font("Monospaced", NORMAL, 18)
         textArea.caret = TerminalCaret()
         // Setup the input listeners
         textArea.addKeyListener(ConsoleInput(this))
@@ -155,9 +155,15 @@ class ConsoleInput(val console: Console) : KeyAdapter() {
             if (console.process != null) {
                 console.threadJob!!.interrupt()
                 console.process!!.destroy()
-            }
-            else console.newLine()
+            } else console.newLine()
             event.consume()
+        } else if (event.keyCode == KeyEvent.VK_MINUS && lctrlheld) {
+            if (console.textArea.font.size > 10)
+                console.textArea.font = Font(console.textArea.font.name, NORMAL, console.textArea.font.size - 2);
+            event.consume();
+        } else if (event.keyCode == KeyEvent.VK_EQUALS && lctrlheld) {
+            console.textArea.font = Font(console.textArea.font.name, NORMAL, console.textArea.font.size + 2);
+            event.consume();
         } else if (event.keyCode == KeyEvent.VK_ESCAPE || event.keyCode == KeyEvent.VK_Q && lctrlheld) {
             // Quit the application
             console.dispose()
