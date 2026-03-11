@@ -64,6 +64,8 @@ class Console : JFrame() {
         val commandText = (textArea.text.substring(commandStartIndex))
         if (commandText.isBlank()) return
 
+        if (isClearCommand(commandText)) return
+
         // Start running the command
         // We don't know if the command the user will run changes the current working directory
         // so we add our own pwd command to it afterward to figure it out.
@@ -111,7 +113,19 @@ class Console : JFrame() {
     }
 
     /**
-     * Clears the terminal of all commands and displays the current working directory
+     * Checks if the given command is a clear command.
+     * If it is it will clear the console and return true, otherwise it returns false.
+     */
+    fun isClearCommand(command: String): Boolean {
+        if (command.trim() == "clear") {
+            clearTerminal()
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Clears the terminal of all commands and displays the current working directory.
      */
     fun clearTerminal() {
         textArea.text = "$currentDirectory$ "
