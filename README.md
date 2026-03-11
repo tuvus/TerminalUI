@@ -10,6 +10,8 @@ Use commands like a normal terminal. There are also special commands for conveni
 * Ctrl + Q: Quits the terminal
 * Ctrl + L: Clears the terminal
 * Ctrl + C: Cancels command input
+* Ctrl + -: Makes the font size smaller
+* Ctrl + =: Makes the font size bigger
 * Escape: Quits the terminal
 
 The source code is in [src/main/kotlin/Main.kt](https://github.com/tuvus/TerminalUI/blob/main/src/main/kotlin/Main.kt)
